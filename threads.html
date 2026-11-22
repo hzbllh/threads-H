@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Threads Search Tool - Kedai H</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f0f0f;
+      color: #f0f0f0;
+      min-height: 100vh;
+      padding: 20px;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 520px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 4px;
+      text-align: center;
+    }
+    .subtitle {
+      text-align: center;
+      color: #aaa;
+      font-size: 0.9rem;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: #bbb;
+      margin-bottom: 6px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1px solid #444;
+      background: #111;
+      color: #fff;
+      font-size: 1rem;
+      margin-bottom: 14px;
+    }
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #0095f6;
+    }
+    .row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    select {
+      flex: 1;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid #444;
+      background: #111;
+      color: #fff;
+      font-size: 0.95rem;
+    }
+    button.primary {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      background: #0095f6;
+      color: white;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button.primary:active { opacity: 0.85; }
+    .quick {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .quick button {
+      background: #222;
+      border: 1px solid #444;
+      color: #eee;
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .quick button:active { background: #333; }
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #2a2a2a;
+      font-size: 0.95rem;
+    }
+    .history-item:last-child { border-bottom: none; }
+    .history-item button {
+      background: none;
+      border: none;
+      color: #0095f6;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .note {
+      font-size: 0.8rem;
+      color: #888;
+      margin-top: 16px;
+      line-height: 1.4;
+    }
+    .clear-btn {
+      background: none;
+      border: none;
+      color: #f44;
+      font-size: 0.8rem;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Threads Search</h1>
+    <p class="subtitle">Cari post & thread tentang topik tertentu</p>
+
+    <div class="card">
+      <label>Keyword / Topik</label>
+      <input type="text" id="keyword" placeholder="contoh: diamond ml, uc pubg, vp valorant" />
+
+      <div class="row">
+        <div style="flex:1">
+          <label>Susunan</label>
+          <select id="sort">
+            <option value="recent">Recent (terbaru)</option>
+            <option value="default">Top (paling relevan)</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="primary" onclick="cari()">Cari di Threads</button>
+
+      <div class="quick">
+        <button onclick="setKeyword('diamond ml')">diamond ml</button>
+        <button onclick="setKeyword('diamond mlbb')">diamond mlbb</button>
+        <button onclick="setKeyword('uc pubg')">uc pubg</button>
+        <button onclick="setKeyword('vp valorant')">vp valorant</button>
+        <button onclick="setKeyword('genesis crystal')">genesis crystal</button>
+        <button onclick="setKeyword('topup ml')">topup ml</button>
+      </div>
+    </div>
+
+    <div class="card" id="historyCard" style="display:none">
+      <label>History Carian</label>
+      <div id="historyList"></div>
+      <button class="clear-btn" onclick="clearHistory()">Padam semua history</button>
+    </div>
+
+    <p class="note">
+      <strong>Cara guna filter masa:</strong><br>
+      Selepas page Threads buka → tekan icon filter (tiga garis) → pilih <em>Date posted</em> (Today / Past 7 days / custom).<br><br>
+      Tool ni hanya buka search. Filter masa, exact match & post type ada dalam Threads sendiri.
+    </p>
+  </div>
+
+  <script>
+    const KEY = "threads_search_history";
+
+    function setKeyword(text) {
+      document.getElementById("keyword").value = text;
+    }
+
+    function cari() {
+      const kw = document.getElementById("keyword").value.trim();
+      if (!kw) {
+        alert("Masukkan keyword dulu");
+        return;
+      }
+
+      const sort = document.getElementById("sort").value;
+      const url = `https://www.threads.com/search?q=${encodeURIComponent(kw)}&serp_type=${sort}`;
+
+      // simpan history
+      let hist = JSON.parse(localStorage.getItem(KEY) || "[]");
+      hist = hist.filter(h => h !== kw);
+      hist.unshift(kw);
+      if (hist.length > 12) hist = hist.slice(0, 12);
+      localStorage.setItem(KEY, JSON.stringify(hist));
+      renderHistory();
+
+      window.open(url, "_blank");
+    }
+
+    function renderHistory() {
+      const hist = JSON.parse(localStorage.getItem(KEY) || "[]");
+      const card = document.getElementById("historyCard");
+      const list = document.getElementById("historyList");
+
+      if (hist.length === 0) {
+        card.style.display = "none";
+        return;
+      }
+
+      card.style.display = "block";
+      list.innerHTML = hist.map(h => `
+        <div class="history-item">
+          <span>${h}</span>
+          <button onclick="setKeyword('${h.replace(/'/g, "\\'")}'); cari()">Cari lagi</button>
+        </div>
+      `).join("");
+    }
+
+    function clearHistory() {
+      localStorage.removeItem(KEY);
+      renderHistory();
+    }
+
+    // Enter key
+    document.getElementById("keyword").addEventListener("keydown", e => {
+      if (e.key === "Enter") cari();
+    });
+
+    // load history bila buka
+    renderHistory();
+  </script>
+</body>
+</html>
